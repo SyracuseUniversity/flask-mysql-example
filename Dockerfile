@@ -1,5 +1,5 @@
 # base image to use for container
-FROM python:3.12-slim
+FROM python:3.13-slim
 
 # create non-privileged user to use
 RUN groupadd -g 999 python && \
