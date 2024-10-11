@@ -7,15 +7,13 @@ pipeline {
   }
 
   environment {
-        APP_NAME = "test-flask-webapp"
-        GIT_REPO = "git@github.com:SyracuseUniversity/test-flask-webapp.git"
-        RELEASE = "1.1"
+        APP_NAME = "flask-mysql-example"
+        GIT_REPO = "git@github.com:SyracuseUniversity/flask-mysql-example.git"
+        RELEASE = "1.0"
         IMAGE_REPO = "harbor.ischool.syr.edu"
-        IMAGE_GROUP = "ist_admins"
+        IMAGE_GROUP = "examples"
         IMAGE_NAME = "${IMAGE_REPO}" + "/" + "${IMAGE_GROUP}" + "/" + "${APP_NAME}"
         IMAGE_TAG = "${RELEASE}.${BUILD_NUMBER}"
-        /* JENKINS_API_TOKEN = credentials("JENKINS_API_TOKEN") */
-
     }
 
   stages {
@@ -37,7 +35,10 @@ pipeline {
       steps {
         container(name: 'kaniko', shell: '/busybox/sh') {
           sh '''#!/busybox/sh
+            # push build number to app
+            echo ${IMAGE_TAG} > `pwd`/app/version.txt
 
+            # build container image and ship
             /kaniko/executor --dockerfile `pwd`/Dockerfile --context `pwd` --destination=${IMAGE_NAME}:${IMAGE_TAG} --destination=${IMAGE_NAME}:latest
           '''
         }
@@ -52,7 +53,8 @@ pipeline {
 
     stage('update k8s deployment manifest') {
       environment {
-        MANIFEST_REPO = "git@github.com:SyracuseUniversity/ischool-k8s-test.git"
+        MANIFEST_REPO = "git@github.com:SyracuseUniversity/flask-mysql-manifests-example.git"
+        DEPLOYMENT_FILE = "app_deployment.yaml"
       }
       steps {
         container(name: 'git', shell: '/bin/sh') {
@@ -71,7 +73,7 @@ pipeline {
             # update build tag
             export OLD_LINE="^[[:space:]]*image: harbor.ischool.syr.edu"
             export NEW_LINE="       image: ${IMAGE_NAME}:${IMAGE_TAG}"
-            sed -i "/$OLD_LINE/c\\ ${NEW_LINE}" `pwd`/${IMAGE_GROUP}/${APP_NAME}/deployment.yaml
+            sed -i "/$OLD_LINE/c\\ ${NEW_LINE}" `pwd`/${DEPLOYMENT_FILE}
 
             # push changes
             git config user.email "ischoolit@ot.syr.edu"
