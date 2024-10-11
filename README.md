@@ -74,7 +74,7 @@ Basically, you push your code, and the system deploys it for you.
 
 You'll want to copy the [Jenkinsfile](./Jenkinsfile) and [jenkins-containers.yaml](./jenkins-containers.yaml) to your repository.
 
-> ![IMPORTANT]
+> [!IMPORTANT]
 > If any of the following steps seem overwhelming or confusing, please reach out to the iSchool Technology Services team for assistance.
 
 #### Environment
