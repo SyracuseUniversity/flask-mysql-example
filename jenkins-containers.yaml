@@ -1,0 +1,38 @@
+kind: Pod
+spec:
+  containers:
+  - name: git
+    image: alpine/git:latest
+    imagePullPolicy: Always
+    command:
+    - sleep
+    args:
+    - 9999999
+    volumeMounts:
+      - name: git-ssh-key
+        mountPath: /keys
+        readOnly: true
+  - name: kaniko
+    image: gcr.io/kaniko-project/executor:debug
+    imagePullPolicy: Always
+    command:
+    - sleep
+    args:
+    - 9999999
+    volumeMounts:
+      - name: jenkins-docker-cfg
+        mountPath: /kaniko/.docker
+  volumes:
+  - name: jenkins-docker-cfg
+    projected:
+      sources:
+      - secret:
+          name: harbor-ist-admins-push-token
+          items:
+            - key: .dockerconfigjson
+              path: config.json
+  - name: git-ssh-key
+    secret:
+      secretName: ischool-k8s-test-ssh-key
+  
+  

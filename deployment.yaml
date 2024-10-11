@@ -1,0 +1,48 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: test-webapp
+  name: test-webapp-nodeport
+  namespace: test-webapp
+spec:
+  ports:
+  - port: 8088
+    nodePort: 30080
+    protocol: TCP
+    targetPort: 5000
+  selector:
+    app: test-webapp
+  type: NodePort
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-webapp
+  namespace: test-webapp
+  labels:
+    app: test-webapp
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: test-webapp
+  template:
+    metadata:
+      labels:
+        app: test-webapp
+    spec:
+      containers:
+      - name: test-webapp
+        image: istapps.azurecr.io/test-flask-webapp:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 5000
+        env:
+        - name: APP_SECRET  
+          value: "ISCHOOL_WIRESHARK_IST233"
+        - name: LOGIN_USER
+          value: ist233
+      imagePullSecrets:
+      - name: regcred    
