@@ -112,9 +112,197 @@ Change the following parameters to fit your application:
 - `MANIFEST_REPO` is the github repository where your kubernetes manifests will live.
 - `DEPLOYMENT_FILE` is the file that will carry the deployment manifest for your application.
 
+#### Update [jenkins-containers.yaml](./jenkins-containers.yaml) manifest
+When setting up your application to use the iSchool's CI/CD pipeline, Technology Services admins will give you two values with the names `CODE_REPO_SECRET_NAME` and `MANIFEST_REPO_SECRET_NAME`. You will replace these names ('<' and '>' included) with the values provided to you.
+
+```yaml
+...
+  volumes:
+  - name: jenkins-docker-cfg
+    projected:
+      sources:
+      - secret:
+          name: <CODE_REPO_SECRET_NAME>
+          items:
+            - key: .dockerconfigjson
+              path: config.json
+  - name: git-ssh-key
+    secret:
+      secretName: <MANIFEST_REPO_SECRET_NAME>
+```
+
 ### Application Code
-#### dependencies
+#### Dependencies
+Dependencies are stored in a [requirements.txt](./requirements.txt) file and installed using pip. Each line is a package that can be installed using pip. You can either just state the package name (i.e. "Flask"), or target a specific version of the package by appending "==" and specifying the version you'd like installed (i.e. "Flask==3.0.3").
+
+```
+Flask==3.0.3
+gunicorn==23.0.0
+Flask-SQLAlchemy==3.1.1
+PyMySQL==1.1.1
+```
+
+#### Environment Variables
+In [app/settings.py](./app/settings.py), we import the `environ` module from the built-in package, `os`. This allows us to read the values of environment variables that have been configured in the OS runtime. This is particularly useful in containerized applications, since it allows you to setup application configuration without the need for a configuration file.
+
+```python
+from os import environ, urandom
+```
+
+From here we assign environment variables to a static variable in python. with the `.get()` function, we are able to query for an environment variable by name. If the the environment variable does not exist, then the get function will take the optional second argument and use that as the default value. In this instance, if `APP_NAME` does not exist, it will be assigned the value "flask-mysql-example".
+
+```python
+# App settings
+APP_NAME      = environ.get("APP_NAME", "flask-mysql-example")
+```
+
+In [app/app.py](./app/app.py), We import the file where we assigned our environment variables to python variables, and use the variables in our application logic:
+
+```python
+...
+from settings import *
+...
+def debug_inputs():
+    # print app version
+    logger.info(f"{APP_NAME} {APP_VERSION}")
+
+    # print environment variables
+    logger.debug("Environment Variables")
+    logger.debug(f"APP_NAME:        {APP_NAME}")
+...
+```
+
+#### Logging
+In containers, logging is usually written to `STD::OUT`. from here the container runtime environment will log it to a file. By default, most logging libraries want to log to a file. This application takes the standard logging library provided by python, and configures it write logs to `STD::OUT`. We can see an example of this in [app/app.py](./app/app.py):
+
+```python
+...
+import logging
+...
+
+# create logger
+logger = logging.getLogger(__name__)
+
+# configure logger to output to stdout
+handler = logging.StreamHandler()
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+...
+```
+
+Next, we use an environment variable to determine the level of logging we'd like to output. In [app/settings.py](./app/settings.py), we assign the `LOGGING_LEVEL` environment variable to a similar named python variable, and give it a default value of "INFO":
+
+```python
+...
+LOGGING_LEVEL = environ.get("LOGGING_LEVEL","INFO")
+...
+```
+
+Now, back in [app/app.py](./app/app.py), we use the environment variable to configure the logging level:
+
+```python
+...
+# set log level
+match LOGGING_LEVEL:
+    case "DEBUG":
+        logger.setLevel(logging.DEBUG)
+    case "WARN":
+        logger.setLevel(logging.WARN)
+    case "ERROR":
+        logger.setLevel(logging.ERROR)
+    case _:
+        logger.setLevel(logging.INFO)
+...
+```
+
+Once this is configured, we can now log different levels of output:
+
+```python
+...
+def debug_inputs():
+    # print app version
+    logger.info(f"{APP_NAME} {APP_VERSION}")
+
+    # print environment variables
+    logger.debug("Environment Variables")
+    logger.debug(f"APP_NAME:        {APP_NAME}")
+    logger.debug(f"APP_VERSION:     {APP_VERSION}")
+    logger.debug(f"LOGGING_LEVEL:   {LOGGING_LEVEL}")
+    logger.debug(f"APP_SECRET:      [redacted]")
+    logger.debug(f"DB_HOST:         {DB_HOST}")
+    logger.debug(f"DB_PORT:         {DB_PORT}")
+    logger.debug(f"DB_NAME:         {DB_NAME}")
+    logger.debug(f"DB_USER:         {DB_USER}")
+    logger.debug(f"DB_PASS:         [redacted]")
+...
+
+@app.route('/add', methods=['POST'])
+def add_entry():
+    name = request.form.get('name',None)
+    logger.info(f"Adding {name} to guestbook.")
+...
+```
+
+Since we've configured logging in our main function, [app/app.py](./app/app.py), We don't have to reconfiure it in every file in our application. Just declare the logger variable. We can see this in [app/database.py](./app/database.py):
+
+```python
+...
+import logging
+
+# create logger
+logger = logging.getLogger(__name__)
+...
+
+    def __init__(self, name):
+        logger.debug(f"db object name: {name}")
+...
+```
+
+#### Versioning
+In our application, we've set up [app/version.txt](./app/version.txt) to hold the current version of our application. This allows us to determine the running version when deployed, and further helps with debugging.
+If you notice in [Jenkinsfile](./Jenkinsfile), We write the IMAGE_TAG variable to this file before building our application's container:
+
+```
+...
+    stage('Build & Push with Kaniko') {
+      steps {
+        container(name: 'kaniko', shell: '/busybox/sh') {
+          sh '''#!/busybox/sh
+            # push build number to app
+            echo ${IMAGE_TAG} > `pwd`/app/version.txt
+...
+```
+
+From here, we read the version from the `version.txt` file in [app/settings.py](./app/settings.py) and assign it to the variable `APP_VERSION`.
+
+```python
+...
+from pathlib import Path
+...
+
+APP_VERISON   = Path('version.txt').read_text().replace('\n','')
+...
+```
+
+From here we can output the version of our application to either our logs or output it on our web application. In our instance, we output it using the logs in [app/app.py](./app/app.py):
+
+```python
+...
+from settings import *
+...
+
+def debug_inputs():
+    # print app version
+    logger.info(f"{APP_NAME} {APP_VERSION}")
+...
+
+if __name__ == '__main__':
+    debug_inputs()
+    app.run()
+```
 
 ### Kubernetes Manifests
-#### 
-##
+The kubernetes manifests for this application can be found [here](https://github.com/SyracuseUniversity/flask-mysql-manifests-example.git)
+
+We keep the manifests in a seperate repository for ArgoCD to read from.

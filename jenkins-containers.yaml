@@ -27,12 +27,12 @@ spec:
     projected:
       sources:
       - secret:
-          name: harbor-ist-admins-push-token
+          name: <CODE_REPO_SECRET_NAME>
           items:
             - key: .dockerconfigjson
               path: config.json
   - name: git-ssh-key
     secret:
-      secretName: ischool-k8s-test-ssh-key
+      secretName: <MANIFEST_REPO_SECRET_NAME>
   
   

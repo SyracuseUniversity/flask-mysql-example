@@ -26,7 +26,7 @@ handler.setFormatter(formatter)
 logger.addHandler(handler)
 
 # set log level
-match settings.LOGGING_LEVEL:
+match LOGGING_LEVEL:
     case "DEBUG":
         logger.setLevel(logging.DEBUG)
     case "WARN":
@@ -38,7 +38,7 @@ match settings.LOGGING_LEVEL:
 
 def debug_inputs():
     # print app version
-    logger.info(f"{settings.APP_NAME} {settings.APP_VERSION}")
+    logger.info(f"{APP_NAME} {APP_VERSION}")
 
     # print environment variables
     logger.debug("Environment Variables")

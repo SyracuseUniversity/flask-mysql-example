@@ -15,6 +15,7 @@ class Logbook(db.Model):
     name      = db.Column(db.String(100), nullable=False)
 
     def __init__(self, name):
+        logger.debug(f"db object name: {name}")
         self.timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         self.name = name
 
