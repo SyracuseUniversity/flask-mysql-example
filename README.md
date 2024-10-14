@@ -1,14 +1,17 @@
 # flask-mysql-example
 
-This is a test flask web application that connect to a mysql backend. the purpose of this repository is to server as a template for creating porjects that use containers and the SU iSchool CI/CD pipelines.
+This is a test flask web application that connect to a mysql backend. the purpose of this repository is to serve as a template for creating projects that use containers and the SU iSchool CI/CD pipelines.
+
+> [!NOTE]
+> Some steps will require the intervention of Technology Services Administrators.
 
 ## About the code
 ### Dependabot
 Dependabot is a feature of Github that will automatically create pull-requests to update your projects dependencies. This will make sure that your code is using the most secure and up-to-date libraries. 
 
-This feature does require manual intervention, having the user merge the pull-request with the main branch of the repository.
+This feature does require manual intervention, having the repository maintainer (usually the person who creates the repository) merge the pull-request with the main branch of the repository.
 
-The Dependabot config is located in [.github/dependabot.yml](./.github/dependabot.yml).
+The Dependabot config is located in [.github/dependabot.yml](./.github/dependabot.yml). It is configured to scan the `requirements.txt` for new pip packages and the `Dockerfile` for a new base image.
 
 ### Dockerfile
 The Dockerfile tells docker how to package your application into a container. We will be using [this Dockerfile](./Dockerfile) in our examples. To learn more about Dockerfiles and their syntax, you can read more [here](https://docs.docker.com/reference/dockerfile/).
@@ -59,7 +62,7 @@ COPY ./app .
 #### Run application
 The last few lines of our Dockerfile help to run our application within the container. The `EXPOSE` function tells docker to open up port 5000 on the container for our application, since flask defaults to listening on port 5000.
 
-The `CMD` command tells docker what command to use to run our container. It takes an array of strings containing the binary we want to run (in this case python), and it's arguments. In the example, we're telling the container to run python, and use the module gunicorn to serve app.py on port 5000:
+The `CMD` command tells docker what command to use to run our container. It takes an array of strings containing the binary we want to run (in this case python), and its arguments. In the example, we're telling the container to run python, and use the module gunicorn to serve app.py on port 5000:
 
 ```dockerfile
 # open port and start app
