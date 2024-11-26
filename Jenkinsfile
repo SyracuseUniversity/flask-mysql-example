@@ -71,9 +71,7 @@ pipeline {
             cd `pwd`/manifests
 
             # update build tag
-            export OLD_LINE="^[[:space:]]*image: harbor.ischool.syr.edu"
-            export NEW_LINE="       image: ${IMAGE_NAME}:${IMAGE_TAG}"
-            sed -i "/$OLD_LINE/c\\ ${NEW_LINE}" `pwd`/${DEPLOYMENT_FILE}
+            yq eval ".spec.template.spec.containers[0].image = \\"${IMAGE_NAME}:${IMAGE_TAG}\\"" -i `pwd`/${DEPLOYMENT_FILE}
 
             # push changes
             git config user.email "ischoolit@ot.syr.edu"
